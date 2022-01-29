@@ -8,15 +8,9 @@ const session=require("express-session");
 const passport=require("passport");
 const passportLocalMongoose=require("passport-local-mongoose");
 const GoogleStrategy=require("passport-google-oauth20").Strategy;
-const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate=require("mongoose-findorcreate");
-//password of bcrypt@this.com is 123456 but in db you will see a hash which will take years to crack
-const saltRounds=10;
-// const encrypt=require("mongoose-encryption"); LEVEL-2 security password:qwerty
-// const md5=require("md5"); //LEVEL 3 SECURITY password:123456
-const app=express();
 
-//console.log(process.env.API_KEY);
+const app=express();
 
 app.use(session({
     secret:"Hi there it's me",
@@ -43,8 +37,6 @@ const userSchema=new mongoose.Schema({
 
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
-//encrypt password so that user can't read it through DB LEVEL-2 security
-// userSchema.plugin(encrypt,{secret:process.env.SECRET,encryptedFields:["password"]});
 
 const User=mongoose.model("User",userSchema);
 
@@ -56,6 +48,7 @@ passport.deserializeUser(function(id, done){
         done(null,user);
     });
 });
+
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
@@ -65,19 +58,6 @@ passport.use(new GoogleStrategy({
   function(accessToken, refreshToken, profile, cb) {
     User.findOrCreate({ googleId: profile.id }, function (err, user) {
       return cb(err, user);
-    });
-  }
-));
-
-passport.use(new FacebookStrategy({
-    clientID: process.env.APP_ID,
-    clientSecret: process.env.APP_SECRET,
-    callbackURL: "https://radiant-shore-67620.herokuapp.com/auth/facebook/secrets"
-  },
-  function(accessToken, refreshToken, profile, done) {
-    User.findOrCreate({facebookId:profile.id}, function(err, user) {
-      if (err) { return done(err); }
-      done(null, user);
     });
   }
 ));
@@ -93,18 +73,8 @@ app.get("/auth/google",
 app.get("/auth/google/secrets", 
   passport.authenticate("google", { failureRedirect: "/login" }),
   function(req, res) {
-    // Successful authentication, redirect home.
+
     res.redirect("/secrets");
-  });
-
-  app.get('/auth/facebook',
-  passport.authenticate('facebook', {authType:'reauthenticate'}));
-
-app.get('/auth/facebook/secrets',
-  passport.authenticate('facebook', { failureRedirect: '/login' }),
-  function(req, res) {
-    // Successful authentication, redirect home.
-    res.redirect('/secrets');
   });
 
   app.get("/submit",function(req,res){
@@ -159,33 +129,7 @@ app.post("/register",function(req,res){
         }
     });
 });
-    // bcrypt.hash(req.body.password,saltRounds,function(err,hash){
-    //     if(!err){
-    //         const newUser=new User({
-    //             email:req.body.username,
-    //             password:hash
-    //         });
-    //         newUser.save(function(err){
-    //             if(!err){
-    //                 res.render("secrets");
-    //             }else{
-    //                 res.send(err);
-    //             }
-    //         });     
-    //     } 
-    // }); bcrypt
-    // const newUser=new User({
-    //     email:req.body.username,
-    //     password:md5(req.body.password)
-    // });
-    // newUser.save(function(err){
-    //     if(!err){
-    //         res.render("secrets");
-    //     }else{
-    //         res.send(err);
-    //     }
-    // }); normal hashing
-// });
+    
 
 app.post("/login",function(req,res){
     const user=new User({
@@ -202,23 +146,6 @@ app.post("/login",function(req,res){
            });
         }
     });
-    // const userName=req.body.username;
-    // // const pass=md5(req.body.password);
-    // const pass=req.body.password;
-
-    // User.findOne({email:userName},function(err,foundUser){
-    //     if(!err){
-    //         if(foundUser){
-    //             bcrypt.compare(pass,foundUser.password,function(err,result){
-    //                 if(!err){
-    //                     res.render("secrets");
-    //                 }
-    //             });
-    //         }
-    //     }else{
-    //         console.log(err);
-    //     }
-    // })
 });
 
 app.get("/logout",function(req,res){
